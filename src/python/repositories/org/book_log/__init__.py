@@ -1,4 +1,4 @@
 """repositories"""
 
-from .csv_repository import CsvBookRepository
+from .csv_repository import CsvBookLogRepository
 from .gss_repository import GssBookLogRepository

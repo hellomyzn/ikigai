@@ -4,6 +4,7 @@ from models.org import Book  # Bookモデル
 
 class CsvBookRepository(CsvBase):
     FILE_NAME = "Books.csv"
+    PATH = "/opt/work/src/csv/org/book"
 
     def __init__(self):
         columns = [
@@ -23,4 +24,5 @@ class CsvBookRepository(CsvBase):
             "notes": "notes"
         }
         adapter = ModelAdapter(model=Book, key_map=key_map)
-        super().__init__(path=self.FILE_NAME, header=columns, adapter=adapter)
+        filepath = f"{self.PATH}/{self.FILE_NAME}"
+        super().__init__(path=filepath, header=columns, adapter=adapter)
