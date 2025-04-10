@@ -13,15 +13,14 @@
 # Own packages
 #########################################################
 from common.log import initialize_logger
-from controllers.org import OrgController
+from controllers.org import BookController
 
 
 def main():
     """main"""
     initialize_logger()
-    org_controller = OrgController()
-    books = org_controller.get_books()
-    org_controller.save_book(books)
+    books, book_logs, book_clock_logs = BookController.get_books()
+    BookController.save_books(books, book_logs, book_clock_logs)
 
 
 if __name__ == "__main__":

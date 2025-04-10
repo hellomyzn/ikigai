@@ -1,3 +1,3 @@
 """controllers"""
 
-from .org_controller import OrgController
+from .book_controller import BookController
