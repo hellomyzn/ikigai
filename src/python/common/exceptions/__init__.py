@@ -4,5 +4,8 @@ from .my_exceptions import (
     MyException,
     MyRequestsException,
     MyJsonDecodeException,
-    MyParamikoException
+    MyParamikoException,
+    MyGssException,
+    MyGssInvalidArgumentException,
+    MyGssResourceExhaustedException
 )

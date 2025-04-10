@@ -28,3 +28,26 @@ class MyParamikoException(MyException):
     Args:
         MyException (Exception): base class
     """
+
+class MyGssException(MyException):
+    """My google spread sheet exception
+
+    Args:
+        MyException (Exception): base class
+    """
+
+
+class MyGssInvalidArgumentException(MyException):
+    """My google spread sheet's invalid argument exception
+
+    Args:
+        MyException (Exception): base class
+    """
+
+
+class MyGssResourceExhaustedException(MyException):
+    """My google spread sheet's resource exhausted exception
+
+    Args:
+        MyException (Exception): base class
+    """
