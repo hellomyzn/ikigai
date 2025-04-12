@@ -70,7 +70,7 @@ class CsvBase(BaseRepositoryInterface):
                 writer.writerow(dict_)
         info("Wrote data to CSV file: {}", target_path)
 
-    def add(self, data: dict) -> None:
+    def add(self, data: list[Model,]) -> None:
         """add data into the csv file
         1件分のレコードをCSVファイルへ追記する
 
@@ -78,12 +78,18 @@ class CsvBase(BaseRepositoryInterface):
         Args:
             data (dict): data to add
         """
+        inputs = []
+
+        for model in data:
+            input_ = self.adapter.from_model(model)
+            inputs.append(input_)
+
         if not self.__has_header():
             self.__write_header()
 
-        with open(self.path, encoding="utf-8", mode="a") as f:
+        with open(self.path, encoding="utf-8", mode="a", newline="") as f:
             writer = csv.DictWriter(f, fieldnames=self.header)
-            writer.writerow(data)
+            writer.writerows(inputs)
 
         info("added data in the csv file({0}).", self.path)
 

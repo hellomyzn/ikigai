@@ -38,9 +38,10 @@ class BookService:
             book_logs (list[BookLog]): 本ログデータのリスト
             book_clock_logs (list[BookClockLog]): 本クロックログデータのリスト
         """
-        self.csv_book_repository.write(books)
-        self.csv_book_log_repository.write(book_logs)
-        self.csv_book_clock_log_repository.write(book_clock_logs)
+
+        self.csv_book_repository.add(books)
+        self.csv_book_log_repository.add(book_logs)
+        self.csv_book_clock_log_repository.add(book_clock_logs)
 
         # self.book_repository.add(books)
         # self.book_log_repository.add(book_logs)
