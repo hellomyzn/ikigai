@@ -1,0 +1,31 @@
+*.DS_Store
+*.bash_history
+*.pyc
+*.DS_Store
+*poetry.lock
+*.bash_history
+
+.stfolder/
+.Trash-1000
+
+# 環境ファイル
+.env
+*.DS_Store
+*poetry.lock
+*.bash_history
+
+# Python
+.pytest_cache
+__pycache__/
+*.pyc
+
+docs/sphinx/resources
+docs/sphinx/build
+
+/src/src/**
+!/src/src/**/
+!/src/src/**/.gitkeep
+src/common/config/config.ini
+src/common/config/config.dev.ini
+
+.devcontainer/infra/docker/ssh-stub/ssh/id*
