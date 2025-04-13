@@ -1,127 +1,130 @@
 """repositories.org.org_reader"""
-from orgparse import load
+from typing import List, Dict, Tuple, Optional
+from datetime import datetime
+import orgparse
+from orgparse.node import OrgNode
+from orgparse.date import OrgDate
 
 class OrgReader:
-    """Orgファイルを読み取るReader"""
+    """OrgファイルからBook, BookLog, BookClockLogデータを抽出するReader"""
 
-    def __init__(self, org_file_paths: list[str]):
+    DATE_FORMAT = "%Y-%m-%d %H:%M"
+    BOOK_TAG = "book"
+    EXCLUDED_HEADINGS = {"URL", "Notes"}
+    CREATED_AT_PREFIX = "CREATED_AT:"
+
+    def __init__(self, org_file_paths: List[str]):
         self.org_file_paths = org_file_paths
 
-    def load_books(self) -> tuple[list[dict], list[dict], list[dict]]:
-        """Book, BookLog, BookClockLog をまとめて取得する"""
+    def load_books(self) -> Tuple[List[Dict], List[Dict], List[Dict]]:
+        """Book, BookLog, BookClockLogデータをまとめて取得する"""
         books = []
         book_logs = []
         book_clock_logs = []
-        id_ = 1
 
         for path in self.org_file_paths:
-            root = load(path)
-            for node in root[1:]:
-                if not self.__is_valid_book_node(node):
-                    continue
+            try:
+                root = orgparse.load(path)
+                for node in root[1:]:
+                    if not self._is_valid_book_node(node):
+                        continue
 
-                # Bookデータ
-                books.append(self.__parse_book_node(node, id_))
+                    # Bookデータ
+                    book = self._parse_book_node(node)
+                    books.append(book)
 
-                # BookLogデータ
-                book_logs.extend(self.__parse_book_logs(node, id_))
+                    # BookLogデータ
+                    book_logs.extend(self._parse_book_logs(node, book))
 
-                # BookClockLogデータ
-                book_clock_logs.extend(self.__parse_book_clock_logs(node, id_))
+                    # BookClockLogデータ
+                    book_clock_logs.extend(self._parse_book_clock_logs(node, book))
 
-                id_ += 1
+            except FileNotFoundError:
+                print(f"Warning: Org file not found: {path}")
+                continue
+
         return books, book_logs, book_clock_logs
 
-    @classmethod
-    def __is_valid_book_node(cls, node) -> bool:
-        """本のデータとみなせるノードかを判定"""
-        if not node.tags or "book" not in node.tags:
-            return False
-        if node.heading.strip() in ("URL", "Notes"):
-            return False
-        return True
+    def _is_valid_book_node(self, node: OrgNode) -> bool:
+        """ノードが本のデータとして有効か判定する"""
+        return (
+            self.BOOK_TAG in (node.tags or set())
+            and node.heading.strip() not in self.EXCLUDED_HEADINGS
+        )
 
-    @classmethod
-    def __parse_book_node(cls, node, book_id: int) -> dict:
-        """本(Book)データを作る"""
+    def _parse_book_node(self, node: OrgNode) -> Dict:
+        """Bookデータを辞書形式で作成する"""
         return {
-            "id": book_id,
             "title": node.heading.strip(),
-            "effort": cls.__extract_property(node, "Effort"),
-            "created_at": cls.__extract_created_at(node),
-            "ended_at": cls.__extract_ended_at(node),
-            "scheduled_at": cls.__extract_scheduled_at(node),
-            "deadline_at": cls.__extract_deadline_at(node),
-            "url": cls.__extract_child_body(node, "URL"),
+            "effort": self._extract_property(node, "Effort"),
+            "created_at": self._extract_created_at(node),
+            "ended_at": self._format_datetime(node.closed.start),
+            "scheduled_at": self._format_datetime(node.scheduled.start),
+            "deadline_at": self._format_datetime(node.deadline.start),
+            "url": self._extract_child_body(node, "URL"),
             "tags": ":".join(node.tags) if node.tags else None,
-            "notes": cls.__extract_child_body(node, "Notes"),
+            "notes": self._extract_child_body(node, "Notes"),
         }
 
-    @classmethod
-    def __parse_book_logs(cls, node, book_id: int) -> list[dict]:
-        """LOGBOOKから状態遷移ログを作る"""
+    def _parse_book_logs(self, node: OrgNode, book: Dict) -> List[Dict]:
+        """LOGBOOKから状態遷移ログを抽出する"""
         logs = []
-        repeated_tasks = getattr(node, "repeated_tasks", [])
-        for log in repeated_tasks:
+        for task in node.repeated_tasks:
+            if not (task.before and task.after):
+                continue
+            timestamp = None
+            if task.start:
+                timestamp = (
+                    task.start.strftime(self.DATE_FORMAT)
+                    if task.has_time
+                    else task.start.strftime("%Y-%m-%d 00:00")
+                )
             logs.append({
-                "id": None,
-                "book_id": book_id,
-                "state": log.after,
-                "from_status": log.before,
-                "timestamp": log.start.strftime("%Y-%m-%d %H:%M") if log.start else None,
+                "state": task.after,
+                "from_status": task.before,
+                "timestamp": timestamp,
+                "book": book,  # Book情報を保持（book_idを後で解決）
             })
         return logs
 
-    @classmethod
-    def __parse_book_clock_logs(cls, node, book_id: int) -> list[dict]:
-        """LOGBOOKから作業時間ログを作る"""
+    def _parse_book_clock_logs(self, node: OrgNode, book: Dict) -> List[Dict]:
+        """LOGBOOKから作業時間ログを抽出する"""
         clocks = []
-        clock_entries = getattr(node, "clock", [])
-        for clock in clock_entries:
-            duration_min = int(clock.duration.total_seconds() / 60) if clock.duration else None
+        for clock in node.clock:
+            duration_min = (
+                int(clock.duration.total_seconds() / 60)
+                if clock.duration
+                else None
+            )
             clocks.append({
-                "id": None,
-                "book_id": book_id,
-                "clock_start": clock.start.strftime("%Y-%m-%d %H:%M") if clock.start else None,
-                "clock_end": clock.end.strftime("%Y-%m-%d %H:%M") if clock.end else None,
+                "clock_start": self._format_datetime(clock.start),
+                "clock_end": self._format_datetime(clock.end),
                 "duration_min": duration_min,
+                "book": book,  # Book情報を保持（book_idを後で解決）
             })
         return clocks
 
-    @classmethod
-    def __extract_property(cls, node, prop: str) -> str | None:
-        """プロパティ値を抽出"""
+    def _extract_property(self, node: OrgNode, prop: str) -> Optional[str]:
+        """指定されたプロパティを抽出する"""
         return node.get_property(prop)
 
-    @classmethod
-    def __extract_created_at(cls, node) -> str | None:
-        """bodyからCREATED_ATを抽出"""
+    def _extract_created_at(self, node: OrgNode) -> Optional[str]:
+        """CREATED_ATフィールドを抽出する"""
         if not node.body:
             return None
         for line in node.body.splitlines():
-            if line.strip().startswith("CREATED_AT:"):
-                return line.split("CREATED_AT:")[1].strip()
+            line = line.strip()
+            if line.startswith(self.CREATED_AT_PREFIX):
+                return line[len(self.CREATED_AT_PREFIX):].strip()
         return None
 
-    @classmethod
-    def __extract_scheduled_at(cls, node) -> str | None:
-        """予定日"""
-        return node.scheduled.start.strftime("%Y-%m-%d %H:%M") if node.scheduled else None
-
-    @classmethod
-    def __extract_deadline_at(cls, node) -> str | None:
-        """締切日"""
-        return node.deadline.start.strftime("%Y-%m-%d %H:%M") if node.deadline else None
-
-    @classmethod
-    def __extract_ended_at(cls, node) -> str | None:
-        """完了日"""
-        return node.closed.start.strftime("%Y-%m-%d %H:%M") if node.closed else None
-
-    @classmethod
-    def __extract_child_body(cls, node, title: str) -> str | None:
-        """子ノードから本文を取り出す（URLやNotes）"""
+    def _extract_child_body(self, node: OrgNode, title: str) -> Optional[str]:
+        """子ノードのボディを抽出する（URLやNotes）"""
         for child in node.children:
-            if child.heading.strip() == title and child.body:
-                return child.body.strip()
+            if child.heading.strip() == title:
+                return child.body.strip() if child.body else None
         return None
+
+    def _format_datetime(self, org_date: str) -> Optional[str]:
+        """OrgDateオブジェクトをフォーマットされた文字列に変換する"""
+        return org_date.strftime(self.DATE_FORMAT) if org_date else None
