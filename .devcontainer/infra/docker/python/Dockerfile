@@ -63,12 +63,18 @@ COPY --chown=${UID}:${GID} .devcontainer/infra/docker/python/docker-entrypoint.s
 COPY --chown=${UID}:${GID} .devcontainer/infra/docker/ssh-stub/ssh/id_rsa ${SSH_HOME}
 RUN chmod 755 /docker-entrypoint.sh
 
+# Poetryをインストール
+RUN pip install --upgrade pip
+RUN pip install poetry --no-cache-dir
+RUN poetry config virtualenvs.create false
+
 # copy site-packages only
 COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
 
 RUN apt-get update -q && \
     apt-get -y install --no-install-recommends git curl && \
     apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+    rm -rf /var/lib/apt/lists/* && \
+    pip install --upgrade pip
 
 USER ${USER_NAME}
