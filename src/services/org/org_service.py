@@ -1,11 +1,14 @@
 """services.org.org_service"""
-from typing import List, Tuple
+from typing import List, Tuple, Dict
+from googleapiclient.errors import HttpError
 from repositories.org import OrgReader
 from repositories.org.book import GssBookRepository, CsvBookRepository
 from repositories.org.book_log import GssBookLogRepository, CsvBookLogRepository
 from repositories.org.book_clock_log import GssBookClockLogRepository, CsvBookClockLogRepository
+from repositories.google_calendar_event_repository import GoogleCalendarEventRepository
 from models.org import Book, BookLog, BookClockLog
-from models import Model
+from common.config import Config
+from common.log import info, warn, error_stack_trace
 
 class OrgService:
     """OrgService - 本に関連するサービス"""
@@ -22,37 +25,36 @@ class OrgService:
         self.csv_book_log_repository = CsvBookLogRepository()
         self.csv_book_clock_log_repository = CsvBookClockLogRepository()
 
-        # GSSリポジトリ（未使用の場合はコメントアウト可能）
+        # GSSリポジトリ
         self.gss_book_repository = GssBookRepository()
         self.gss_book_log_repository = GssBookLogRepository()
         self.gss_book_clock_log_repository = GssBookClockLogRepository()
 
+        # Google Calendarリポジトリ
+        config = Config().config
+        calendar_id = config['CALENDAR']['CALENDAR_ID']
+        self.calendar_repository = GoogleCalendarEventRepository(calendar_id)
+
     def get_books(self) -> Tuple[List[Book], List[BookLog], List[BookClockLog]]:
         """本・本ログ・本クロックログの一覧を取得する"""
-        # Orgファイルからデータを取得
         books_dict_from_org, logs_dict_from_org, clocks_dict_from_org = self.reader.load_books()
 
-        # 既存CSVデータを取得
         existing_books_dict = self.csv_book_repository.all()
         existing_logs_dict = self.csv_book_log_repository.all()
         existing_clocks_dict = self.csv_book_clock_log_repository.all()
 
-        # 次のIDを取得
         next_book_id = self.csv_book_repository.find_next_id()
         next_log_id = self.csv_book_log_repository.find_next_id()
         next_clock_id = self.csv_book_clock_log_repository.find_next_id()
 
-        # Bookのマッピング（title, url, created_at -> book_id）
         book_id_map = self._create_book_id_map(existing_books_dict)
         new_books, updated_book_id_map = self._process_new_books(
             books_dict_from_org, existing_books_dict, next_book_id, book_id_map
         )
 
-        # BookLogとBookClockLogを処理
         new_logs = self._process_new_logs(logs_dict_from_org, updated_book_id_map, next_log_id)
         new_clocks = self._process_new_clocks(clocks_dict_from_org, updated_book_id_map, next_clock_id)
 
-        # モデルに変換
         books = [Book.from_dict(b) for b in new_books]
         book_logs = [BookLog.from_dict(l) for l in new_logs]
         book_clock_logs = [BookClockLog.from_dict(c) for c in new_clocks]
@@ -61,15 +63,52 @@ class OrgService:
 
     def save(self, books: List[Book], book_logs: List[BookLog], book_clock_logs: List[BookClockLog]) -> None:
         """本・本ログ・本クロックログを保存する"""
-        self.csv_book_repository.add(books)
-        self.csv_book_log_repository.add(book_logs)
-        self.csv_book_clock_log_repository.add(book_clock_logs)
+        try:
+            # CSVに保存
+            self.csv_book_repository.add(books)
+            self.gss_book_repository.add(books)
+            info(f"Saved {len(books)} books to CSV")
+            self.csv_book_log_repository.add(book_logs)
+            self.gss_book_log_repository.add(book_logs)
+            info(f"Saved {len(book_logs)} book logs to CSV")
+            self.csv_book_clock_log_repository.add(book_clock_logs)
+            self.gss_book_clock_log_repository.add(book_clock_logs)
+            info(f"Saved {len(book_clock_logs)} book clock logs to CSV")
 
-        self.gss_book_repository.add(books)
-        self.gss_book_log_repository.add(book_logs)
-        self.gss_book_clock_log_repository.add(book_clock_logs)
+            # Google Calendarに同期
+            if book_logs or book_clock_logs:
+                info("Starting Google Calendar sync")
+                self.calendar_repository.add(book_logs, book_clock_logs)
+                info(f"Synced {len(book_logs)} book logs and {len(book_clock_logs)} book clock logs to Google Calendar")
+            else:
+                info("No new logs or clock logs to sync to Google Calendar")
 
-    def _create_book_id_map(self, existing_books: List[dict]) -> dict[Tuple, int]:
+        except HttpError as exc:
+            warn(f"Failed to sync to Google Calendar: {exc}")
+            error_stack_trace(f"Google Calendar sync error: {exc}")
+            # エラーをログに記録し、処理を続行（CSV保存は保持）
+        except Exception as exc:
+            error_stack_trace(f"Unexpected error in save: {exc}")
+            raise  # その他のエラーは再スロー
+
+    def sync_to_google_calendar(self) -> None:
+        """新しいデータを取得し、Google Calendarに同期"""
+        try:
+            books, book_logs, book_clock_logs = self.get_books()
+            if book_logs or book_clock_logs:
+                info("Starting Google Calendar sync for new data")
+                self.calendar_repository.add(book_logs, book_clock_logs)
+                info(f"Synced {len(book_logs)} book logs and {len(book_clock_logs)} book clock logs to Google Calendar")
+            else:
+                info("No new data to sync to Google Calendar")
+        except HttpError as exc:
+            warn(f"Failed to sync to Google Calendar: {exc}")
+            error_stack_trace(f"Google Calendar sync error: {exc}")
+        except Exception as exc:
+            error_stack_trace(f"Unexpected error in sync_to_google_calendar: {exc}")
+            raise
+
+    def _create_book_id_map(self, existing_books: List[Dict]) -> Dict:
         """既存のBookデータから(title, url, created_at) -> book_idのマッピングを作成"""
         book_id_map = {}
         for book in existing_books:
@@ -83,11 +122,11 @@ class OrgService:
 
     def _process_new_books(
         self,
-        books_from_org: List[dict],
-        existing_books: List[dict],
+        books_from_org: List[Dict],
+        existing_books: List[Dict],
         next_book_id: int,
-        book_id_map: dict[Tuple, int]
-    ) -> Tuple[List[dict], dict[Tuple, int]]:
+        book_id_map: Dict
+    ) -> Tuple[List[Dict], Dict]:
         """新しいBookデータを抽出し、book_idを割り当てる"""
         new_books = []
         current_book_id = next_book_id
@@ -107,24 +146,23 @@ class OrgService:
 
     def _process_new_logs(
         self,
-        logs_from_org: List[dict],
-        book_id_map: dict[Tuple, int],
+        logs_from_org: List[Dict],
+        book_id_map: Dict,
         next_log_id: int
-    ) -> List[dict]:
+    ) -> List[Dict]:
         """新しいBookLogデータを抽出し、book_idとidを割り当てる"""
         new_logs = []
         current_log_id = next_log_id
 
         compare_keys = ["state", "from_status", "timestamp"]
         for log in logs_from_org:
-            book = log.pop("book")  # book情報を取り出す
+            book = log.pop("book")
             book_key = (book["title"], book["url"], book["created_at"])
             book_id = book_id_map.get(book_key)
 
             if book_id is None:
-                continue  # 対応するBookがない場合はスキップ
+                continue
 
-            # 重複チェック
             log_key = tuple(log.get(k) for k in compare_keys) + (book_id,)
             if not self._is_existing_log(log_key, book_id):
                 log["id"] = current_log_id
@@ -136,24 +174,23 @@ class OrgService:
 
     def _process_new_clocks(
         self,
-        clocks_from_org: List[dict],
-        book_id_map: dict[Tuple, int],
+        clocks_from_org: List[Dict],
+        book_id_map: Dict,
         next_clock_id: int
-    ) -> List[dict]:
+    ) -> List[Dict]:
         """新しいBookClockLogデータを抽出し、book_idとidを割り当てる"""
         new_clocks = []
         current_clock_id = next_clock_id
 
         compare_keys = ["clock_start", "clock_end"]
         for clock in clocks_from_org:
-            book = clock.pop("book")  # book情報を取り出す
+            book = clock.pop("book")
             book_key = (book["title"], book["url"], book["created_at"])
             book_id = book_id_map.get(book_key)
 
             if book_id is None:
-                continue  # 対応するBookがない場合はスキップ
+                continue
 
-            # 重複チェック
             clock_key = tuple(clock.get(k) for k in compare_keys) + (book_id,)
             if not self._is_existing_clock(clock_key, book_id):
                 clock["id"] = current_clock_id

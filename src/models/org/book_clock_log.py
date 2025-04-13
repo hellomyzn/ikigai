@@ -10,7 +10,7 @@ class BookClockLog(Model):
     book_id: int | None = field(init=True, default=None)
     clock_start: str | None = field(init=True, default=None)
     clock_end: str | None = field(init=True, default=None)
-    duration: int | None = field(init=True, default=None)
+    duration_min: int | None = field(init=True, default=None)
 
     @classmethod
     def from_dict(cls, dict_: dict):
@@ -20,7 +20,7 @@ class BookClockLog(Model):
             "book_id": dict_.get("book_id"),
             "clock_start": dict_.get("clock_start"),
             "clock_end": dict_.get("clock_end"),
-            "duration": dict_.get("duration")
+            "duration_min": dict_.get("duration_min")
         })
 
     def to_dict(self, without_none_field: bool = False) -> dict:
@@ -30,7 +30,7 @@ class BookClockLog(Model):
             "book_id": self.book_id,
             "clock_start": self.clock_start,
             "clock_end": self.clock_end,
-            "duration": self.duration
+            "duration_min": self.duration_min
         }
 
         if without_none_field:

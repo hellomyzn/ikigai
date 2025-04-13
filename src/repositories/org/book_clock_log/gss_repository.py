@@ -12,14 +12,14 @@ class GssBookClockLogRepository(GSSBase):
 
     def __init__(self):
         columns = [
-            "id", "book_id", "clock_start", "clock_end", "duration"
+            "id", "book_id", "clock_start", "clock_end", "duration_min"
         ]
         key_map = {
             "id": "id",
             "book_id": "book_id",
             "clock_start": "clock_start",
             "clock_end": "clock_end",
-            "duration": "duration"
+            "duration_min": "duration_min"
         }
         self.sheet_key = SHEET_KEY
         self.sheet_name = "BookClockLogs"
