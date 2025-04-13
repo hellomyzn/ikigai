@@ -10,12 +10,12 @@ class Book(Model):
     """Book model"""
     id: int | None = field(init=True, default=None)
     title: str | None = field(init=True, default=None)
-    priority: str | None = field(init=True, default=None)
     effort: float | None = field(init=True, default=None)
     created_at: str | None = field(init=True, default=None)
     ended_at: str | None = field(init=True, default=None)
     scheduled_at: str | None = field(init=True, default=None)
     deadline_at: str | None = field(init=True, default=None)
+    url: str | None = field(init=True, default=None)
     tags: str | None = field(init=True, default=None)
     notes: str | None = field(init=True, default=None)
 
@@ -25,12 +25,12 @@ class Book(Model):
         return cls(**{
             "id": dict_.get("id"),
             "title": dict_.get("title"),
-            "priority": dict_.get("priority"),
             "effort": dict_.get("effort"),
             "created_at": dict_.get("created_at"),
             "ended_at": dict_.get("ended_at"),
             "scheduled_at": dict_.get("scheduled_at"),
             "deadline_at": dict_.get("deadline_at"),
+            "url": dict_.get("url"),
             "tags": dict_.get("tags"),
             "notes": dict_.get("notes")
         })
@@ -40,12 +40,12 @@ class Book(Model):
         dict_ = {
             "id": self.id,
             "title": self.title,
-            "priority": self.priority,
             "effort": self.effort,
             "created_at": self.created_at,
             "ended_at": self.ended_at,
             "scheduled_at": self.scheduled_at,
             "deadline_at": self.deadline_at,
+            "url": self.url,
             "tags": self.tags,
             "notes": self.notes
         }

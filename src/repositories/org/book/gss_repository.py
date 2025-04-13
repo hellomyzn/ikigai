@@ -11,18 +11,19 @@ class GssBookRepository(GSSBase):
 
     def __init__(self):
         columns = [
-            "id", "title", "priority", "effort",
-            "created_at", "ended_at", "scheduled_at", "deadline_at", "tags", "notes"
+            "id", "title", "effort",
+            "created_at", "ended_at", "scheduled_at", 
+            "deadline_at", "url", "tags", "notes"
         ]
         key_map = {
             "id": "id",
             "title": "title",
-            "priority": "priority",
             "effort": "effort",
             "created_at": "created_at",
             "ended_at": "ended_at",
             "scheduled_at": "scheduled_at",
             "deadline_at": "deadline_at",
+            "url": "url",
             "tags": "tags",
             "notes": "notes"
         }

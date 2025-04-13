@@ -1,3 +1,3 @@
 """services"""
 
-from .book_service import BookService
+from .org_service import OrgService

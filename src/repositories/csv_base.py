@@ -96,6 +96,14 @@ class CsvBase(BaseRepositoryInterface):
     def delete_by_id(self, id_: int) -> None:
         pass
 
+    def find_next_id(self) -> int:
+        """CSVファイル内の次に使うべきIDを取得する"""
+        records = self.all()
+        if not records:
+            return 1  # データがなければ最初のIDは1
+        max_id = max((record["id"] for record in records if record["id"] is not None), default=0)
+        return int(max_id) + 1
+
     def __has_header(self) -> bool:
         """check the csv file has header or not
 
