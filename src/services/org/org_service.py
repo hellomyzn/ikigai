@@ -1,11 +1,13 @@
 """services.org.org_service"""
 from typing import List, Tuple, Dict
+from datetime import datetime
 from googleapiclient.errors import HttpError
 from repositories.org import OrgReader
 from repositories.org.book import GssBookRepository, CsvBookRepository
 from repositories.org.book_log import GssBookLogRepository, CsvBookLogRepository
+from repositories.org.book_log import GcalBookLogRepository
 from repositories.org.book_clock_log import GssBookClockLogRepository, CsvBookClockLogRepository
-from repositories.google_calendar_event_repository import GoogleCalendarEventRepository
+from repositories.org.book_clock_log import GcalBookClockLogRepository
 from models.org import Book, BookLog, BookClockLog
 from common.config import Config
 from common.log import info, warn, error_stack_trace
@@ -31,9 +33,10 @@ class OrgService:
         self.gss_book_clock_log_repository = GssBookClockLogRepository()
 
         # Google Calendarリポジトリ
+        self.book_log_calendar_repository = GcalBookLogRepository()
+        self.book_clock_log_calendar_repository = GcalBookClockLogRepository()
         config = Config().config
         calendar_id = config['CALENDAR']['CALENDAR_ID']
-        self.calendar_repository = GoogleCalendarEventRepository(calendar_id)
 
     def get_books(self) -> Tuple[List[Book], List[BookLog], List[BookClockLog]]:
         """本・本ログ・本クロックログの一覧を取得する"""
@@ -76,10 +79,15 @@ class OrgService:
             info(f"Saved {len(book_clock_logs)} book clock logs to CSV")
 
             # Google Calendarに同期
-            if book_logs or book_clock_logs:
-                info("Starting Google Calendar sync")
-                self.calendar_repository.add(book_logs, book_clock_logs)
-                info(f"Synced {len(book_logs)} book logs and {len(book_clock_logs)} book clock logs to Google Calendar")
+            if book_logs:
+                info("Starting Google Calendar sync for book logs")
+                self.book_log_calendar_repository.add(book_logs)
+            else:
+                info("No new logs or clock logs to sync to Google Calendar")
+
+            if book_clock_logs:
+                info("Starting Google Calendar sync for book clock logs")
+                self.book_clock_log_calendar_repository.add(book_clock_logs)
             else:
                 info("No new logs or clock logs to sync to Google Calendar")
 
@@ -91,22 +99,6 @@ class OrgService:
             error_stack_trace(f"Unexpected error in save: {exc}")
             raise  # その他のエラーは再スロー
 
-    def sync_to_google_calendar(self) -> None:
-        """新しいデータを取得し、Google Calendarに同期"""
-        try:
-            books, book_logs, book_clock_logs = self.get_books()
-            if book_logs or book_clock_logs:
-                info("Starting Google Calendar sync for new data")
-                self.calendar_repository.add(book_logs, book_clock_logs)
-                info(f"Synced {len(book_logs)} book logs and {len(book_clock_logs)} book clock logs to Google Calendar")
-            else:
-                info("No new data to sync to Google Calendar")
-        except HttpError as exc:
-            warn(f"Failed to sync to Google Calendar: {exc}")
-            error_stack_trace(f"Google Calendar sync error: {exc}")
-        except Exception as exc:
-            error_stack_trace(f"Unexpected error in sync_to_google_calendar: {exc}")
-            raise
 
     def _create_book_id_map(self, existing_books: List[Dict]) -> Dict:
         """既存のBookデータから(title, url, created_at) -> book_idのマッピングを作成"""

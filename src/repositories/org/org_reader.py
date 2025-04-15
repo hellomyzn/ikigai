@@ -115,7 +115,19 @@ class OrgReader:
         for line in node.body.splitlines():
             line = line.strip()
             if line.startswith(self.CREATED_AT_PREFIX):
-                return line[len(self.CREATED_AT_PREFIX):].strip()
+                raw_date = line[len(self.CREATED_AT_PREFIX):].strip()
+                # [YYYY-MM-DD Day HH:MM] 形式をパース
+                try:
+                    # ブラケットと曜日を除去
+                    clean_date = raw_date.strip('[]').split()
+                    if len(clean_date) >= 3:
+                        date_str = f"{clean_date[0]} {clean_date[2]}"  # YYYY-MM-DD HH:MM
+                        parsed_date = datetime.strptime(date_str, "%Y-%m-%d %H:%M")
+                        return parsed_date.strftime(self.DATE_FORMAT)
+                    return None
+                except ValueError:
+                    print(f"Warning: Invalid CREATED_AT format: {raw_date}")
+                    return None
         return None
 
     def _extract_child_body(self, node: OrgNode, title: str) -> Optional[str]:
