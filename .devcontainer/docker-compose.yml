@@ -40,6 +40,9 @@ services:
       - type: bind
         source: ${FOOTPRINTS_DIR}/emacs/org
         target: /opt/org
+      - type: bind
+        source: ../.vscode
+        target: /opt/.vscode
       # - type: bind
       #   source: ${FOOTPRINTS_DIR}/read_laters.csv
       #   target: ${CSV_DIR-/opt/csv}/read_later/read_laters.csv
