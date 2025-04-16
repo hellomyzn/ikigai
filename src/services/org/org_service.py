@@ -12,8 +12,10 @@ from models.org import Book, BookLog, BookClockLog
 from common.config import Config
 from common.log import info, warn, error_stack_trace
 
+
 class OrgService:
     """OrgService - 本に関連するサービス"""
+
     def __init__(self):
         org_file_paths = [
             "/opt/org/agendas/journal.org",
@@ -78,18 +80,18 @@ class OrgService:
             self.gss_book_clock_log_repository.add(book_clock_logs)
             info(f"Saved {len(book_clock_logs)} book clock logs to CSV")
 
-            # Google Calendarに同期
-            if book_logs:
-                info("Starting Google Calendar sync for book logs")
-                self.book_log_calendar_repository.add(book_logs)
-            else:
-                info("No new logs or clock logs to sync to Google Calendar")
+            # # Google Calendarに同期
+            # if book_logs:
+            #     info("Starting Google Calendar sync for book logs")
+            #     self.book_log_calendar_repository.add(book_logs)
+            # else:
+            #     info("No new logs or clock logs to sync to Google Calendar")
 
-            if book_clock_logs:
-                info("Starting Google Calendar sync for book clock logs")
-                self.book_clock_log_calendar_repository.add(book_clock_logs)
-            else:
-                info("No new logs or clock logs to sync to Google Calendar")
+            # if book_clock_logs:
+            #     info("Starting Google Calendar sync for book clock logs")
+            #     self.book_clock_log_calendar_repository.add(book_clock_logs)
+            # else:
+            #     info("No new logs or clock logs to sync to Google Calendar")
 
         except HttpError as exc:
             warn(f"Failed to sync to Google Calendar: {exc}")
@@ -98,7 +100,6 @@ class OrgService:
         except Exception as exc:
             error_stack_trace(f"Unexpected error in save: {exc}")
             raise  # その他のエラーは再スロー
-
 
     def _create_book_id_map(self, existing_books: List[Dict]) -> Dict:
         """既存のBookデータから(title, url, created_at) -> book_idのマッピングを作成"""

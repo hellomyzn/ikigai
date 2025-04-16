@@ -1,27 +1,41 @@
-from repositories.csv_base import CsvBase
-from repositories.model_adapter import ModelAdapter
-from models.org import BookClockLog  # Bookモデル
+"""repository.org.book_clock_log.csv_repository"""
+#########################################################
+# Builtin packages
+#########################################################
+# (None)
 
-class CsvBookClockLogRepository(CsvBase):
-    """_summary_
+#########################################################
+# 3rd party packages
+#########################################################
+# (None)
 
-    Args:
-        CsvBase (_type_): _description_
+#########################################################
+# Own packages
+#########################################################
+from models.org import BookClockLog
+from repositories import CsvBaseRepository, CsvConfig
+
+
+class CsvBookClockLogRepository(CsvBaseRepository):
+    """BookClockLogデータをCSVに保存するリポジトリ。
+
+    CsvBaseを継承し、Book専用のCsvConfigを設定する。
     """
-    FILE_NAME = "BookClockLogs.csv"
-    PATH = "/opt/work/src/csv/org/book"
 
     def __init__(self):
-        columns = [
-            "id", "book_id", "clock_start", "clock_end", "duration_min"
-        ]
-        key_map = {
-            "id": "id",
-            "book_id": "book_id",
-            "clock_start": "clock_start",
-            "clock_end": "clock_end",
-            "duration_min": "duration_min"
-        }
-        adapter = ModelAdapter(model=BookClockLog, key_map=key_map)
-        filepath = f"{self.PATH}/{self.FILE_NAME}"
-        super().__init__(path=filepath, header=columns, adapter=adapter)
+        config = CsvConfig(
+            file_name="BookClockLogs.csv",
+            base_path="/opt/work/src/csv/org/book",
+            columns=[
+                "id", "book_id", "clock_start", "clock_end", "duration_min"
+            ],
+            key_map={
+                "id": "id",
+                "book_id": "book_id",
+                "clock_start": "clock_start",
+                "clock_end": "clock_end",
+                "duration_min": "duration_min"
+            },
+            model_type=BookClockLog
+        )
+        super().__init__(config)

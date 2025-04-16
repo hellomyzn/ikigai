@@ -1,29 +1,48 @@
-from repositories.csv_base import CsvBase
-from repositories.model_adapter import ModelAdapter
-from models.org import Book  # Bookモデル
+"""repository.org.book.csv_repository"""
+#########################################################
+# Builtin packages
+#########################################################
+# (None)
 
-class CsvBookRepository(CsvBase):
-    FILE_NAME = "Books.csv"
-    PATH = "/opt/work/src/csv/org/book"
+#########################################################
+# 3rd party packages
+#########################################################
+# (None)
+
+#########################################################
+# Own packages
+#########################################################
+from models.org import Book
+from repositories import CsvBaseRepository, CsvConfig
+
+
+class CsvBookRepository(CsvBaseRepository):
+    """BookデータをCSVに保存するリポジトリ。
+
+    CsvBaseを継承し、Book専用のCsvConfigを設定する。
+    """
 
     def __init__(self):
-        columns = [
-            "id", "title", "effort",
-            "created_at", "ended_at", "scheduled_at", 
-            "deadline_at", "url", "tags", "notes"
-        ]
-        key_map = {
-            "id": "id",
-            "title": "title",
-            "effort": "effort",
-            "created_at": "created_at",
-            "ended_at": "ended_at",
-            "scheduled_at": "scheduled_at",
-            "deadline_at": "deadline_at",
-            "url": "url",
-            "tags": "tags",
-            "notes": "notes"
-        }
-        adapter = ModelAdapter(model=Book, key_map=key_map)
-        filepath = f"{self.PATH}/{self.FILE_NAME}"
-        super().__init__(path=filepath, header=columns, adapter=adapter)
+        config = CsvConfig(
+            file_name="Books.csv",
+            base_path="/opt/work/src/csv/org/book",
+            columns=[
+                "id", "title", "effort",
+                "created_at", "ended_at", "scheduled_at",
+                "deadline_at", "url", "tags", "notes"
+            ],
+            key_map={
+                "id": "id",
+                "title": "title",
+                "effort": "effort",
+                "created_at": "created_at",
+                "ended_at": "ended_at",
+                "scheduled_at": "scheduled_at",
+                "deadline_at": "deadline_at",
+                "url": "url",
+                "tags": "tags",
+                "notes": "notes"
+            },
+            model_type=Book
+        )
+        super().__init__(config)
