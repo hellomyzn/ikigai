@@ -51,3 +51,25 @@ class MyGssResourceExhaustedException(MyException):
     Args:
         MyException (Exception): base class
     """
+
+class GoogleCalendarPermissionError(MyException):
+    """Exception raised when Google Calendar encounters a permission error.
+
+    Args:
+        MyException (Exception): base class
+    """
+
+class GoogleCalendarRateLimitError(MyException):
+    """Exception raised when Google Calendar hits a rate limit.
+
+
+    Args:
+        MyException (Exception): base class
+    """
+
+class GoogleCalendarError(MyException):
+    """General exception for Google Calendar-related errors.
+
+    Args:
+        MyException (Exception): base class
+    """

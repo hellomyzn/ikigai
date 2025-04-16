@@ -7,11 +7,11 @@ from repositories.org.book import CsvBookRepository
 from common.log import warn
 from common.config import Config
 
+
 class GcalBookClockLogRepository(GoogleCalendarBaseRepository):
     """Google CalendarにBookClockLogを追加するリポジトリ"""
     __config = Config().config
     __cal_id = __config['CALENDAR']['CALENDAR_ID']
-
 
     def __init__(self, calendar_id: str = "primary"):
         __config = Config().config

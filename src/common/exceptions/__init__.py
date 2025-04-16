@@ -7,5 +7,8 @@ from .my_exceptions import (
     MyParamikoException,
     MyGssException,
     MyGssInvalidArgumentException,
-    MyGssResourceExhaustedException
+    MyGssResourceExhaustedException,
+    GoogleCalendarPermissionError,
+    GoogleCalendarRateLimitError,
+    GoogleCalendarError
 )

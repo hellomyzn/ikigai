@@ -7,6 +7,7 @@ from repositories.org.book import CsvBookRepository
 from common.log import warn
 from common.config import Config
 
+
 class GcalBookLogRepository(GoogleCalendarBaseRepository):
     """Google CalendarにBookLogを追加するリポジトリ"""
     __config = Config().config
@@ -51,7 +52,7 @@ class GcalBookLogRepository(GoogleCalendarBaseRepository):
             },
             "extendedProperties": {
                 "private": {
-                    "type": self.event_type,
+                    "type": self._event_type,
                     "log_id": str(item.id),
                     "book_id": str(item.book_id),
                     "state": item.state
