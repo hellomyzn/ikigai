@@ -22,7 +22,7 @@ RUN poetry config virtualenvs.create false
 
 # コピーして依存関係だけインストール
 COPY ${PROJECT_DIR}/pyproject.toml ${PROJECT_DIR}/poetry.lock ./
-RUN if [ -f pyproject.toml ]; then poetry install --no-root; fi
+RUN if [ -f pyproject.toml ]; then poetry install --no-root --with dev; fi
 
 # ------------------------
 # 2. final stage
@@ -70,11 +70,11 @@ RUN poetry config virtualenvs.create false
 
 # copy site-packages only
 COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
+COPY --from=builder /usr/local/bin/pytest /home/${USER_NAME}/.local/bin/pytest
 
 RUN apt-get update -q && \
     apt-get -y install --no-install-recommends git curl && \
     apt-get clean && \
-    rm -rf /var/lib/apt/lists/* && \
-    pip install --upgrade pip
+    rm -rf /var/lib/apt/lists/*
 
 USER ${USER_NAME}
