@@ -1,6 +1,7 @@
 # ikigai
 
 Collect, archive, and reflect on personal data — from health records to digital footprints — to better understand my "ikigai".
+[DeepWiki](https://deepwiki.com/hellomyzn/ikigai)
 
 ## Overview
 
