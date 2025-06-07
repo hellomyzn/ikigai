@@ -3,6 +3,8 @@ from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
+from common.exceptions import GoogleCalendarError
+
 from utils import Singleton
 from common.config import Config
 from common.log import info, error_stack_trace
@@ -59,4 +61,6 @@ class GoogleCalendarAccessor(Singleton):
             error_stack_trace(
                 f"Fail to connect Google Calendar. error: {err}, json_path: {json_path}, scopes: {scopes}"
             )
-            raise
+            raise GoogleCalendarError(
+                "Failed to initialize Google Calendar connection"
+            ) from err
